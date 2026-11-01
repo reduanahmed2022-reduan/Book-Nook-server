@@ -3,21 +3,27 @@ import express from 'express';
 import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import 'dotenv/config';
-import bookRoutes, { setBooksCollection } from './routes/bookRoutes.js';
+
+
+import bookRoutes, {
+    setBooksCollection,
+    setBorrowsCollection,
+} from './routes/bookRoutes.js';
 
 const app = express();
 const PORT = 5000;
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+  origin: 'http://localhost:3000',
+  credentials: true,
 }));
 
 app.use(express.json());
-app.use('/', bookRoutes);
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
 let booksCollection;
+let borrowsCollection;
 
 // MongoDB Connection
 async function connectToMongoDB() {
@@ -25,9 +31,13 @@ async function connectToMongoDB() {
         await client.connect();
 
         const database = client.db('Book-Nook');
-        booksCollection = database.collection('books');
 
+        booksCollection = database.collection('books');
+        borrowsCollection = database.collection('borrows');
+
+        // Connect collections with bookRoutes
         setBooksCollection(booksCollection);
+        setBorrowsCollection(borrowsCollection);
 
         console.log('You successfully connected to MongoDB!');
     } catch (err) {
@@ -121,6 +131,9 @@ app.post('/books', async (req, res) => {
         });
     }
 });
+
+// Book Routes
+app.use('/', bookRoutes);
 
 // Start Server After MongoDB Connection
 connectToMongoDB()
