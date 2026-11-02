@@ -726,3 +726,60 @@ router.patch("/books/:id", verifySession, async (req, res) => {
   }
 });
 
+// DELETE: Delete Book
+router.delete("/books/:id", verifySession, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (typeof id !== "string" || !ObjectId.isValid(id)) {
+      res.status(400).json({
+        message: "Invalid book ID.",
+      });
+      return;
+    }
+
+    const bookObjectId = new ObjectId(id);
+
+    const book = await booksCollection.findOne({
+      _id: bookObjectId,
+      userEmail: req.user.email,
+    });
+
+    if (!book) {
+      res.status(404).json({
+        message: "Book not found or you are not authorized.",
+      });
+      return;
+    }
+
+    const activeBorrows = await borrowsCollection.countDocuments({
+      bookId: bookObjectId,
+    });
+
+    if (activeBorrows > 0) {
+      res.status(400).json({
+        message:
+          "This book cannot be deleted because it is currently borrowed.",
+      });
+      return;
+    }
+
+    await booksCollection.deleteOne({
+      _id: bookObjectId,
+      userEmail: req.user.email,
+    });
+
+    res.status(200).json({
+      message: "Book deleted successfully!",
+    });
+  } catch (error) {
+    console.error("Delete book error:", error);
+    res.status(500).json({
+      message: "Failed to delete book.",
+    });
+  }
+});
+
+export default router;
+
+
