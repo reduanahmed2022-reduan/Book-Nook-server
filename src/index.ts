@@ -153,3 +153,57 @@ async function connectToMongoDB(): Promise<void> {
   console.log("MongoDB connected successfully!");
 }
 
+// Home Route
+app.get("/", (req: Request, res: Response) => {
+  res.status(200).json({
+    message: "Server is running fine!",
+  });
+});
+
+// Get All Books
+app.get("/books", async (req: Request, res: Response) => {
+  try {
+    const requestedLimit = Number(req.query.limit);
+
+    let query = booksCollection.find().sort({ _id: -1 });
+
+    if (req.query.limit !== undefined) {
+      if (
+        !Number.isInteger(requestedLimit) ||
+        requestedLimit < 1
+      ) {
+        return res.status(400).json({
+          message: "Invalid limit.",
+        });
+      }
+
+      query = query.limit(requestedLimit);
+    }
+
+    const books = await query.toArray();
+
+    return res.status(200).json(books);
+  } catch (error) {
+    console.error("Get books error:", error);
+
+    return res.status(500).json({
+      message: "Failed to load books.",
+    });
+  }
+});
+
+// Register Routes
+app.use("/", bookRoutes);
+app.use("/", borrowRoutes);
+
+// Start Server
+connectToMongoDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running at ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Server failed to start:", error);
+    process.exit(1);
+  });
